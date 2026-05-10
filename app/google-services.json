@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "349321975124",
+    "project_id": "arcadia-app-62bb2",
+    "storage_bucket": "arcadia-app-62bb2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:349321975124:android:29b4c770f0387fc83824c1",
+        "android_client_info": {
+          "package_name": "com.teodordevtech.arcadiatourism"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBoU0pPyEEF3uuRfb5__O9om0wcP_Y79RU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,88 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isTeacher() {
+      return isSignedIn()
+        && (
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "teacher"
+          || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "Teacher"
+          || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "admin"
+          || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "Admin"
+        );
+    }
+
+    function isStudent() {
+      return isSignedIn()
+        && (
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "student"
+          || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "Student"
+        );
+    }
+
+    match /users/{userId} {
+      allow read: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update: if isTeacher() || request.auth.uid == userId;
+      allow delete: if false;
+    }
+
+    match /topics/{topicId} {
+      allow read: if isTeacher() || isStudent();
+      allow create, update: if isTeacher();
+      allow delete: if isTeacher();
+    }
+
+    match /documents/{documentId} {
+      allow read: if isTeacher() || isStudent();
+      allow create, update: if isTeacher();
+      allow delete: if isTeacher();
+    }
+
+    match /quizzes/{quizId} {
+      allow read: if isTeacher() || isStudent();
+      allow create, update: if isTeacher();
+      allow delete: if isTeacher();
+    }
+
+    match /quizQuestions/{questionId} {
+      allow read: if isTeacher() || isStudent();
+      allow create, update: if isTeacher();
+      allow delete: if isTeacher();
+    }
+
+    match /quizResults/{resultId} {
+      allow read: if isTeacher() || (isStudent() && request.auth.uid == resource.data.studentId);
+      allow create: if isStudent() && request.auth.uid == request.resource.data.studentId;
+      allow update: if false;
+      allow delete: if isTeacher();
+    }
+
+    match /questions/{questionId} {
+      allow read: if isTeacher() || isStudent();
+      allow create: if isStudent() && request.auth.uid == request.resource.data.studentId;
+      allow update: if isTeacher();
+      allow delete: if isTeacher();
+    }
+
+    match /answers/{answerId} {
+      allow read: if isTeacher() || isStudent();
+      allow create, update: if isTeacher();
+      allow delete: if isTeacher();
+    }
+
+    match /media/{mediaId} {
+      allow read: if isTeacher() || isStudent();
+      allow create, update, delete: if isTeacher();
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isTeacher() || isStudent();
+      allow create: if isTeacher();
+      allow update, delete: if isTeacher();
+    }
+  }
+}
