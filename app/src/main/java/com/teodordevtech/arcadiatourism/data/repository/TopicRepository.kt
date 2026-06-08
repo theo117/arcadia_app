@@ -8,8 +8,6 @@ import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.storage.BucketApi
 import io.github.jan.supabase.storage.storage
-import java.net.URLDecoder
-import java.nio.charset.StandardCharsets
 import java.util.UUID
 
 class TopicRepository {
@@ -52,36 +50,19 @@ class TopicRepository {
 
     suspend fun deleteTopic(topicId: String): Result<Unit> {
         return try {
-            val documents = supabase.from("documents")
-                .select {
-                    filter {
-                        eq("topic_id", topicId)
-                    }
-                }
-                .decodeList<AppDocument>()
-
-            val mediaItems = supabase.from("media")
-                .select {
-                    filter {
-                        eq("topic_id", topicId)
-                    }
-                }
-                .decodeList<MediaItem>()
+            val documents = getDocuments(topicId)
+            val mediaItems = getMediaItems(topicId)
 
             deleteStoredFiles(
                 documentBucket,
                 documents.mapNotNull { document ->
-                    document.storagePath.ifBlank {
-                        extractStoragePath(document.fileUrl, "topic-documents")
-                    }
+                    document.withDerivedStoragePath().storagePath.ifBlank { null }
                 }
             )
             deleteStoredFiles(
                 mediaBucket,
                 mediaItems.mapNotNull { mediaItem ->
-                    mediaItem.storagePath.ifBlank {
-                        extractStoragePath(mediaItem.fileUrl, "topic-media")
-                    }
+                    mediaItem.withDerivedStoragePath().storagePath.ifBlank { null }
                 }
             )
 
@@ -99,12 +80,8 @@ class TopicRepository {
 
     suspend fun getStorageUsageBytes(): Result<Long> {
         return try {
-            val documents = supabase.from("documents")
-                .select()
-                .decodeList<AppDocument>()
-            val mediaItems = supabase.from("media")
-                .select()
-                .decodeList<MediaItem>()
+            val documents = getDocuments()
+            val mediaItems = getMediaItems()
 
             Result.success(
                 documents.sumOf { it.fileSizeBytes } + mediaItems.sumOf { it.fileSizeBytes }
@@ -124,12 +101,57 @@ class TopicRepository {
         }
     }
 
-    private fun extractStoragePath(fileUrl: String, bucketName: String): String? {
-        val marker = "/object/public/$bucketName/"
-        val index = fileUrl.indexOf(marker)
-        if (index < 0) return null
+    private suspend fun getDocuments(topicId: String? = null): List<AppDocument> {
+        return try {
+            supabase.from("documents")
+                .select {
+                    topicId?.let { selectedTopicId ->
+                        filter {
+                            eq("topic_id", selectedTopicId)
+                        }
+                    }
+                }
+                .decodeList<AppDocument>()
+        } catch (error: Exception) {
+            if (!isMissingStorageMetadataColumn(error)) throw error
 
-        val encodedPath = fileUrl.substring(index + marker.length)
-        return URLDecoder.decode(encodedPath, StandardCharsets.UTF_8.name())
+            supabase.from("documents")
+                .select(columns = legacyDocumentColumns) {
+                    topicId?.let { selectedTopicId ->
+                        filter {
+                            eq("topic_id", selectedTopicId)
+                        }
+                    }
+                }
+                .decodeList<AppDocument>()
+                .map { it.withDerivedStoragePath() }
+        }
+    }
+
+    private suspend fun getMediaItems(topicId: String? = null): List<MediaItem> {
+        return try {
+            supabase.from("media")
+                .select {
+                    topicId?.let { selectedTopicId ->
+                        filter {
+                            eq("topic_id", selectedTopicId)
+                        }
+                    }
+                }
+                .decodeList<MediaItem>()
+        } catch (error: Exception) {
+            if (!isMissingStorageMetadataColumn(error)) throw error
+
+            supabase.from("media")
+                .select(columns = legacyMediaColumns) {
+                    topicId?.let { selectedTopicId ->
+                        filter {
+                            eq("topic_id", selectedTopicId)
+                        }
+                    }
+                }
+                .decodeList<MediaItem>()
+                .map { it.withDerivedStoragePath() }
+        }
     }
 }

@@ -17,7 +17,7 @@ class NotificationRepository {
     suspend fun syncFcmTokenForUser(userId: String) {
         val token = suspendCancellableCoroutine<String> { continuation ->
             Firebase.messaging.token
-                .addOnSuccessListener { continuation.resume(it) {} }
+                .addOnSuccessListener { continuation.resume(it) }
                 .addOnFailureListener { continuation.resumeWithException(it) }
         }
 
@@ -35,7 +35,7 @@ class NotificationRepository {
     suspend fun subscribeToRoleTopic(role: String) {
         suspendCancellableCoroutine<Unit> { continuation ->
             Firebase.messaging.subscribeToTopic("grade12_${role.normalizedRole()}")
-                .addOnSuccessListener { continuation.resume(Unit) {} }
+                .addOnSuccessListener { continuation.resume(Unit) }
                 .addOnFailureListener { continuation.resumeWithException(it) }
         }
     }

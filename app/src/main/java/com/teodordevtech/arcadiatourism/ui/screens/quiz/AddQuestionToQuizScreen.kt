@@ -20,6 +20,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.teodordevtech.arcadiatourism.ui.viewmodel.QuizUiState
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun AddQuestionToQuizScreen(
@@ -137,6 +140,12 @@ fun AddQuestionToQuizScreen(
                         if (result.studentEmail.isNotBlank()) {
                             Text(text = result.studentEmail)
                         }
+                        if (result.studentGrade.isNotBlank()) {
+                            Text(text = "Grade: ${result.studentGrade}")
+                        }
+                        if (result.submittedAt > 0L) {
+                            Text(text = "Submitted: ${formatSubmittedAt(result.submittedAt)}")
+                        }
                         Text(text = "Score: ${result.score} / ${result.totalQuestions}")
                         Text(text = "Grade: ${result.percentage}%")
                     }
@@ -144,4 +153,8 @@ fun AddQuestionToQuizScreen(
             }
         }
     }
+}
+
+private fun formatSubmittedAt(timestamp: Long): String {
+    return SimpleDateFormat("dd MMM yyyy, HH:mm", Locale.US).format(Date(timestamp))
 }

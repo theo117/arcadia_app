@@ -56,7 +56,7 @@ class AuthRepository {
         grade: String
     ): Result<User?> {
         return try {
-            supabase.auth.signUpWith(Email, redirectUrl = SupabaseProvider.AUTH_REDIRECT_URL) {
+            supabase.auth.signUpWith(Email, redirectUrl = SupabaseProvider.emailConfirmationRedirectUrl) {
                 this.email = email
                 this.password = password
                 data = buildJsonObject {

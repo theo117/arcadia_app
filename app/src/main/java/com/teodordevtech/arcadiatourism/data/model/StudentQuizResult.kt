@@ -5,6 +5,10 @@ data class StudentQuizResult(
     val studentId: String = "",
     val studentName: String = "",
     val studentEmail: String = "",
+    val studentGrade: String = "",
+    val quizId: String = "",
+    val quizTitle: String = "",
+    val topicTitle: String = "",
     val score: Int = 0,
     val totalQuestions: Int = 0,
     val submittedAt: Long = 0L

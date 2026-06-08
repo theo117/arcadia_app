@@ -52,6 +52,11 @@ android {
             "SUPABASE_ANON_KEY",
             "\"${readConfigProperty("SUPABASE_ANON_KEY")}\""
         )
+        buildConfigField(
+            "String",
+            "AUTH_CONFIRMATION_URL",
+            "\"${readConfigProperty("AUTH_CONFIRMATION_URL")}\""
+        )
     }
 
     buildTypes {

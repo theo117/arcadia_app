@@ -90,13 +90,24 @@ fun QuizListScreen(
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(text = quiz.title, fontWeight = FontWeight.SemiBold)
-                            Text(
-                                text = if (isTeacher) {
-                                    "Open to add or review questions"
-                                } else {
-                                    "Open to start quiz"
-                                }
-                            )
+                            
+                            val userResult = uiState.results.find { it.quizId == quiz.quizId }
+                            if (userResult != null && !isTeacher) {
+                                Text(
+                                    text = "Last Score: ${userResult.score}/${userResult.totalQuestions}",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            } else {
+                                Text(
+                                    text = if (isTeacher) {
+                                        "Open to add or review questions"
+                                    } else {
+                                        "Open to start quiz"
+                                    }
+                                )
+                            }
                         }
 
                         if (isTeacher) {

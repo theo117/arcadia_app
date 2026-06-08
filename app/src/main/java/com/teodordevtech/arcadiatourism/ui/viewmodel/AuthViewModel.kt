@@ -3,6 +3,9 @@ package com.teodordevtech.arcadiatourism.ui.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.teodordevtech.arcadiatourism.auth.AuthCallbackRegistry
+import com.teodordevtech.arcadiatourism.auth.errorDescription
+import com.teodordevtech.arcadiatourism.auth.isSignUpConfirmation
 import com.teodordevtech.arcadiatourism.data.model.User
 import com.teodordevtech.arcadiatourism.data.repository.AuthRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,6 +46,43 @@ class AuthViewModel(
                         errorMessage = error.message ?: "Failed to load user profile."
                     )
                 }
+            }
+        }
+
+        viewModelScope.launch {
+            AuthCallbackRegistry.event.collect { event ->
+                event ?: return@collect
+
+                val callbackError = event.errorDescription()
+                when {
+                    callbackError != null -> {
+                        _uiState.update {
+                            it.copy(
+                                currentUser = null,
+                                isLoading = false,
+                                errorMessage = callbackError,
+                                successMessage = null,
+                                shouldReturnToLogin = true
+                            )
+                        }
+                    }
+
+                    event.isSignUpConfirmation() -> {
+                        runCatching { authRepository.logout() }
+                        _uiState.update {
+                            it.copy(
+                                password = "",
+                                currentUser = null,
+                                isLoading = false,
+                                errorMessage = null,
+                                successMessage = "Thank you for confirming your email",
+                                shouldReturnToLogin = true
+                            )
+                        }
+                    }
+                }
+
+                AuthCallbackRegistry.clear(event.id)
             }
         }
     }

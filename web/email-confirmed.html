@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Email Confirmed</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg-top: #f6fbff;
+      --bg-bottom: #dceeff;
+      --card: rgba(255, 255, 255, 0.92);
+      --text: #15324d;
+      --muted: #55708c;
+      --accent: #0f7bff;
+      --accent-dark: #0b5fc4;
+      --shadow: 0 24px 60px rgba(15, 48, 89, 0.18);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(15, 123, 255, 0.18), transparent 35%),
+        linear-gradient(160deg, var(--bg-top), var(--bg-bottom));
+      padding: 24px;
+    }
+
+    main {
+      width: min(100%, 480px);
+      background: var(--card);
+      border: 1px solid rgba(15, 123, 255, 0.12);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      padding: 40px 32px;
+      text-align: center;
+      backdrop-filter: blur(10px);
+    }
+
+    .badge {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 20px;
+      border-radius: 22px;
+      display: grid;
+      place-items: center;
+      background: linear-gradient(135deg, #0f7bff, #57b2ff);
+      color: #fff;
+      font-size: 34px;
+      font-weight: 700;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: clamp(28px, 5vw, 34px);
+      line-height: 1.1;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.6;
+    }
+
+    .link {
+      display: inline-block;
+      margin-top: 24px;
+      padding: 12px 18px;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #fff;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .link:hover {
+      background: var(--accent-dark);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="badge">✓</div>
+    <h1>Thank you for confirming your email</h1>
+    <p>You will be redirected back to the app automatically.</p>
+    <a class="link" id="open-app-link" href="arcadia://login-callback">Open the app now</a>
+  </main>
+
+  <script>
+    (function () {
+      var appUrl = "arcadia://login-callback";
+      var suffix = window.location.hash || window.location.search || "";
+      var redirectUrl = appUrl + suffix;
+      var openAppLink = document.getElementById("open-app-link");
+
+      openAppLink.href = redirectUrl;
+
+      window.setTimeout(function () {
+        window.location.replace(redirectUrl);
+      }, 1500);
+    }());
+  </script>
+</body>
+</html>

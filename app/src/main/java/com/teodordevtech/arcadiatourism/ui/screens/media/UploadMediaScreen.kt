@@ -40,7 +40,7 @@ fun UploadMediaScreen(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text(text = "Add Media Link", style = MaterialTheme.typography.headlineSmall)
+        Text(text = "Upload Media", style = MaterialTheme.typography.headlineSmall)
 
         OutlinedTextField(
             value = uiState.titleInput,

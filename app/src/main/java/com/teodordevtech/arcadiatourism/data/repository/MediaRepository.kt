@@ -7,6 +7,8 @@ import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.storage.storage
 import java.util.Locale
 import java.util.UUID
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 class MediaRepository {
     private val supabase = SupabaseProvider.client
@@ -30,16 +32,12 @@ class MediaRepository {
 
     suspend fun getMediaForTopic(topicId: String): Result<List<MediaItem>> {
         return try {
-            Result.success(
-                supabase.from("media")
-                    .select {
-                        filter {
-                            eq("topic_id", topicId)
-                        }
-                        order(column = "uploaded_at", order = Order.DESCENDING)
-                    }
-                    .decodeList<MediaItem>()
-            )
+            Result.success(selectMediaList {
+                filter {
+                    eq("topic_id", topicId)
+                }
+                order(column = "uploaded_at", order = Order.DESCENDING)
+            })
         } catch (error: Exception) {
             Result.failure(error)
         }
@@ -47,15 +45,11 @@ class MediaRepository {
 
     suspend fun getMediaById(mediaId: String): Result<MediaItem?> {
         return try {
-            Result.success(
-                supabase.from("media")
-                    .select {
-                        filter {
-                            eq("media_id", mediaId)
-                        }
-                    }
-                    .decodeSingleOrNull<MediaItem>()
-            )
+            Result.success(selectMediaItem {
+                filter {
+                    eq("media_id", mediaId)
+                }
+            })
         } catch (error: Exception) {
             Result.failure(error)
         }
@@ -95,7 +89,7 @@ class MediaRepository {
                     uploadedAt = System.currentTimeMillis()
                 )
 
-                supabase.from("media").insert(mediaItem)
+                insertMediaItem(mediaItem)
             } catch (error: Exception) {
                 runCatching {
                     bucket.delete(storagePath)
@@ -111,7 +105,7 @@ class MediaRepository {
 
     suspend fun deleteMedia(mediaItem: MediaItem): Result<Unit> {
         return try {
-            mediaItem.storagePath.ifBlank { null }?.let { storagePath ->
+            mediaItem.withDerivedStoragePath().storagePath.ifBlank { null }?.let { storagePath ->
                 bucket.delete(storagePath)
             }
 
@@ -126,4 +120,76 @@ class MediaRepository {
             Result.failure(error)
         }
     }
+
+    private suspend fun selectMediaList(
+        request: io.github.jan.supabase.postgrest.query.request.SelectRequestBuilder.() -> Unit
+    ): List<MediaItem> {
+        return try {
+            supabase.from("media")
+                .select(request = request)
+                .decodeList<MediaItem>()
+        } catch (error: Exception) {
+            if (!isMissingStorageMetadataColumn(error)) throw error
+            supabase.from("media")
+                .select(columns = legacyMediaColumns, request = request)
+                .decodeList<MediaItem>()
+                .map { it.withDerivedStoragePath() }
+        }
+    }
+
+    private suspend fun selectMediaItem(
+        request: io.github.jan.supabase.postgrest.query.request.SelectRequestBuilder.() -> Unit
+    ): MediaItem? {
+        return try {
+            supabase.from("media")
+                .select(request = request)
+                .decodeSingleOrNull<MediaItem>()
+        } catch (error: Exception) {
+            if (!isMissingStorageMetadataColumn(error)) throw error
+            supabase.from("media")
+                .select(columns = legacyMediaColumns, request = request)
+                .decodeSingleOrNull<MediaItem>()
+                ?.withDerivedStoragePath()
+        }
+    }
+
+    private suspend fun insertMediaItem(mediaItem: MediaItem) {
+        try {
+            supabase.from("media").insert(mediaItem)
+        } catch (error: Exception) {
+            if (!isMissingStorageMetadataColumn(error)) throw error
+            supabase.from("media").insert(
+                LegacyMediaInsert(
+                    mediaId = mediaItem.mediaId,
+                    topicId = mediaItem.topicId,
+                    title = mediaItem.title,
+                    description = mediaItem.description,
+                    mediaType = mediaItem.mediaType,
+                    fileUrl = mediaItem.fileUrl,
+                    uploadedBy = mediaItem.uploadedBy,
+                    uploadedAt = mediaItem.uploadedAt
+                )
+            )
+        }
+    }
+
+    @Serializable
+    private data class LegacyMediaInsert(
+        @SerialName("media_id")
+        val mediaId: String,
+        @SerialName("topic_id")
+        val topicId: String,
+        @SerialName("title")
+        val title: String,
+        @SerialName("description")
+        val description: String,
+        @SerialName("media_type")
+        val mediaType: String,
+        @SerialName("file_url")
+        val fileUrl: String,
+        @SerialName("uploaded_by")
+        val uploadedBy: String,
+        @SerialName("uploaded_at")
+        val uploadedAt: Long
+    )
 }

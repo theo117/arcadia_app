@@ -7,6 +7,8 @@ import io.github.jan.supabase.postgrest.query.Order
 import io.github.jan.supabase.storage.storage
 import java.util.Locale
 import java.util.UUID
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 class DocumentRepository {
     private val supabase = SupabaseProvider.client
@@ -25,14 +27,12 @@ class DocumentRepository {
     suspend fun getDocumentsForTopic(topicId: String): Result<List<AppDocument>> {
         return try {
             Result.success(
-                supabase.from("documents")
-                    .select {
-                        filter {
-                            eq("topic_id", topicId)
-                        }
-                        order(column = "uploaded_at", order = Order.DESCENDING)
+                selectDocuments {
+                    filter {
+                        eq("topic_id", topicId)
                     }
-                    .decodeList<AppDocument>()
+                    order(column = "uploaded_at", order = Order.DESCENDING)
+                }
             )
         } catch (error: Exception) {
             Result.failure(error)
@@ -69,7 +69,7 @@ class DocumentRepository {
                     uploadedAt = System.currentTimeMillis()
                 )
 
-                supabase.from("documents").insert(document)
+                insertDocument(document)
             } catch (error: Exception) {
                 runCatching {
                     bucket.delete(storagePath)
@@ -82,4 +82,57 @@ class DocumentRepository {
             Result.failure(error)
         }
     }
+
+    private suspend fun selectDocuments(
+        request: io.github.jan.supabase.postgrest.query.request.SelectRequestBuilder.() -> Unit
+    ): List<AppDocument> {
+        return try {
+            supabase.from("documents")
+                .select(request = request)
+                .decodeList<AppDocument>()
+        } catch (error: Exception) {
+            if (!isMissingStorageMetadataColumn(error)) throw error
+            supabase.from("documents")
+                .select(columns = legacyDocumentColumns, request = request)
+                .decodeList<AppDocument>()
+                .map { it.withDerivedStoragePath() }
+        }
+    }
+
+    private suspend fun insertDocument(document: AppDocument) {
+        try {
+            supabase.from("documents").insert(document)
+        } catch (error: Exception) {
+            if (!isMissingStorageMetadataColumn(error)) throw error
+            supabase.from("documents").insert(
+                LegacyDocumentInsert(
+                    documentId = document.documentId,
+                    topicId = document.topicId,
+                    title = document.title,
+                    fileUrl = document.fileUrl,
+                    fileType = document.fileType,
+                    uploadedBy = document.uploadedBy,
+                    uploadedAt = document.uploadedAt
+                )
+            )
+        }
+    }
+
+    @Serializable
+    private data class LegacyDocumentInsert(
+        @SerialName("document_id")
+        val documentId: String,
+        @SerialName("topic_id")
+        val topicId: String,
+        @SerialName("title")
+        val title: String,
+        @SerialName("file_url")
+        val fileUrl: String,
+        @SerialName("file_type")
+        val fileType: String,
+        @SerialName("uploaded_by")
+        val uploadedBy: String,
+        @SerialName("uploaded_at")
+        val uploadedAt: Long
+    )
 }

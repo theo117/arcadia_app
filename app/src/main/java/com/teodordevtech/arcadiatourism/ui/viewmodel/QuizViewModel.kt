@@ -17,7 +17,9 @@ data class QuizUiState(
     val quizzes: List<Quiz> = emptyList(),
     val questions: List<QuizQuestion> = emptyList(),
     val results: List<StudentQuizResult> = emptyList(),
+    val teacherResults: List<StudentQuizResult> = emptyList(),
     val isLoading: Boolean = false,
+    val isTeacherResultsLoading: Boolean = false,
     val quizTitleInput: String = "",
     val questionTextInput: String = "",
     val optionAInput: String = "",
@@ -30,6 +32,7 @@ data class QuizUiState(
     val latestScore: Int = 0,
     val latestTotal: Int = 0,
     val latestQuizTitle: String = "",
+    val teacherResultsMessage: String? = null,
     val message: String? = null
 )
 
@@ -79,7 +82,19 @@ class QuizViewModel(
             _uiState.update { it.copy(isLoading = true, message = null) }
             val result = quizRepository.getQuizzesForTopic(topicId)
             result.onSuccess { quizzes ->
-                _uiState.update { it.copy(isLoading = false, quizzes = quizzes) }
+                val allResults = mutableListOf<StudentQuizResult>()
+                quizzes.forEach { quiz ->
+                    quizRepository.getQuizResults(quiz.quizId).onSuccess { results ->
+                        allResults.addAll(results)
+                    }
+                }
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        quizzes = quizzes,
+                        results = allResults
+                    )
+                }
             }.onFailure { error ->
                 _uiState.update {
                     it.copy(isLoading = false, message = error.message ?: "Could not load quizzes.")
@@ -220,6 +235,33 @@ class QuizViewModel(
         }
     }
 
+    fun loadTeacherResults(teacherId: String) {
+        viewModelScope.launch {
+            _uiState.update {
+                it.copy(
+                    isTeacherResultsLoading = true,
+                    teacherResultsMessage = null
+                )
+            }
+            val result = quizRepository.getResultsForTeacher(teacherId)
+            result.onSuccess { grades ->
+                _uiState.update {
+                    it.copy(
+                        isTeacherResultsLoading = false,
+                        teacherResults = grades
+                    )
+                }
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        isTeacherResultsLoading = false,
+                        teacherResultsMessage = error.message ?: "Could not load quiz results."
+                    )
+                }
+            }
+        }
+    }
+
     fun submitQuiz(studentId: String, quizId: String, quizTitle: String, onSuccess: () -> Unit) {
         val questions = uiState.value.questions
         val selectedAnswers = uiState.value.selectedAnswers
@@ -247,12 +289,23 @@ class QuizViewModel(
                 totalQuestions = questions.size
             )
             result.onSuccess {
+                val newResult = StudentQuizResult(
+                    quizId = quizId,
+                    quizTitle = quizTitle,
+                    score = score,
+                    totalQuestions = questions.size,
+                    submittedAt = System.currentTimeMillis()
+                )
                 _uiState.update {
+                    val updatedResults = it.results.toMutableList()
+                    updatedResults.removeAll { r -> r.quizId == quizId }
+                    updatedResults.add(newResult)
                     it.copy(
                         isLoading = false,
                         latestScore = score,
                         latestTotal = questions.size,
                         latestQuizTitle = quizTitle,
+                        results = updatedResults,
                         message = "Quiz submitted."
                     )
                 }

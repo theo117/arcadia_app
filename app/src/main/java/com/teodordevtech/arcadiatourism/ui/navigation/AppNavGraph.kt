@@ -121,7 +121,13 @@ fun AppNavGraph(
             AdminDashboardScreen(
                 user = authState.currentUser,
                 topicState = topicState,
+                quizState = quizState,
                 onLoadTopics = topicViewModel::loadTopics,
+                onLoadTeacherResults = {
+                    authState.currentUser?.uid?.let { uid ->
+                        quizViewModel.loadTeacherResults(uid)
+                    }
+                },
                 onCreateTopic = { title, description ->
                     authState.currentUser?.uid?.let { uid ->
                         topicViewModel.createTopic(title, description, uid)
@@ -243,6 +249,7 @@ fun AppNavGraph(
             UploadDocumentScreen(
                 topicId = topicId,
                 uiState = documentState,
+                onLoadDocuments = { documentViewModel.loadDocuments(topicId) },
                 onTitleChange = documentViewModel::updateTitle,
                 onFileSelected = documentViewModel::updateSelectedFile,
                 onUploadClick = {
@@ -300,6 +307,14 @@ fun AppNavGraph(
                 topicId = topicId,
                 uiState = mediaState,
                 onLoadMedia = { mediaViewModel.loadMedia(topicId) },
+                onPreviewMedia = { mediaItem ->
+                    val route = if (mediaItem.mediaType == "audio") {
+                        AppDestination.AudioPlayer.createRoute(mediaItem.mediaId)
+                    } else {
+                        AppDestination.VideoPlayer.createRoute(mediaItem.mediaId)
+                    }
+                    navController.navigate(route)
+                },
                 onDeleteMedia = { mediaItem -> mediaViewModel.deleteMedia(topicId, mediaItem) },
                 onBackClick = { navController.popBackStack() }
             )
@@ -472,7 +487,7 @@ fun AppNavGraph(
             QuizResultScreen(
                 quizTitle = quizState.latestQuizTitle,
                 score = quizState.latestScore,
-                total = quizState.latestTotal,
+                totalQuestions = quizState.latestTotal,
                 onBackToQuizzes = { navController.popBackStack() }
             )
         }

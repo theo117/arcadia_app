@@ -12,7 +12,12 @@ import java.net.URI
 object SupabaseProvider {
     const val AUTH_SCHEME = "arcadia"
     const val AUTH_HOST = "login-callback"
-    const val AUTH_REDIRECT_URL = "$AUTH_SCHEME://$AUTH_HOST"
+    const val APP_AUTH_REDIRECT_URL = "$AUTH_SCHEME://$AUTH_HOST"
+
+    val emailConfirmationRedirectUrl: String
+        get() = BuildConfig.AUTH_CONFIRMATION_URL
+            .trim()
+            .ifBlank { APP_AUTH_REDIRECT_URL }
 
     val client: SupabaseClient by lazy {
         val supabaseUrl = BuildConfig.SUPABASE_URL

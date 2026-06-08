@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
@@ -24,6 +25,7 @@ fun ManageMediaScreen(
     topicId: String,
     uiState: MediaUiState,
     onLoadMedia: () -> Unit,
+    onPreviewMedia: (MediaItem) -> Unit,
     onDeleteMedia: (MediaItem) -> Unit,
     onBackClick: () -> Unit
 ) {
@@ -61,11 +63,28 @@ fun ManageMediaScreen(
                         Text(text = item.title, fontWeight = FontWeight.SemiBold)
                         Text(text = item.description)
                         Text(text = "Type: ${item.mediaType}")
-                        Button(
-                            onClick = { onDeleteMedia(item) },
-                            modifier = Modifier.fillMaxWidth()
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text("Delete Media")
+                            Button(
+                                onClick = { onPreviewMedia(item) },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text(
+                                    if (item.mediaType == "audio") {
+                                        "Preview Audio"
+                                    } else {
+                                        "Preview Video"
+                                    }
+                                )
+                            }
+                            Button(
+                                onClick = { onDeleteMedia(item) },
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Text("Delete Media")
+                            }
                         }
                     }
                 }
